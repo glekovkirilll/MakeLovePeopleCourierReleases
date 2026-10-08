@@ -1,0 +1,35 @@
+name: Publish courier test release
+on:
+  push:
+    branches: [main]
+    paths: [.github/workflows/publish-test-65.yml]
+permissions:
+  contents: write
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download verified APK artifact
+        env:
+          APK_ARCHIVE_URL: "https://sdmntprnortheu.oaiusercontent.com/files/00000000-3188-81f4-afec-58abdc54227a/raw?se=2026-10-08T08%3A22%3A51Z&sp=r&sv=2026-02-06&sr=b&scid=3156a15d-ae04-48b2-bd54-0a3c7ec49a54&skoid=7b771594-2b4f-4e93-93be-fdeeeb59aaf9&sktid=a48cca56-e6da-484e-a814-9c849652bcb3&skt=2026-10-08T06%3A59%3A50Z&ske=2026-10-09T06%3A59%3A50Z&sks=b&skv=2026-02-06&sig=zgs%2BONXuxl9ajzUmFQ%2BZ%2BES5Fb4s6nRMihufzgy8sS4%3D"
+        run: |
+          curl --fail --location --retry 2 "$APK_ARCHIVE_URL" --output courier-test-apk.zip
+          echo '6fb42956c0dab8cefd2a6301bc27756b66025677cb7916bcbc75f5e130179549  courier-test-apk.zip' | sha256sum --check
+          unzip -j courier-test-apk.zip -d apk
+          mv apk/app-debug.apk MakeLoveCourier-1.10.26.65_Beta-test.apk
+          sha256sum MakeLoveCourier-1.10.26.65_Beta-test.apk > SHA256SUMS.txt
+      - name: Publish test release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<'NOTES'
+          Общее место в очереди и отдельное место среди своего транспорта (авто/вело).
+          Подключение к рабочему сайту расписания, заявки через доступность курьера, уведомления о назначениях и напоминания за час до смены по времени Томска.
+
+          Это проверенная тестовая сборка 1.10.26.65_Beta-ScheduleTest, package com.makelove.courier.schedule. Она устанавливается отдельно от старого приложения и не заменяет его. Для расписания нужен отдельный вход и разрешение на уведомления. Android может задерживать фоновое выполнение.
+
+          Новые кнопки заявок и уведомления кураторам требуют обновления сервера расписания; до этого заявки доступны через существующее действие «Указать доступность».
+
+          Сборка Android и тесты успешно прошли в приватном репозитории. Архив APK проверен по SHA-256 перед публикацией.
+          NOTES
+          gh release create v1.10.26.65_Beta-Test MakeLoveCourier-1.10.26.65_Beta-test.apk SHA256SUMS.txt --repo glekovkirilll/MakeLovePeopleCourierReleases --title "MakeLove Courier 1.10.26.65 Beta — тестовая сборка" --prerelease --notes-file notes.md
